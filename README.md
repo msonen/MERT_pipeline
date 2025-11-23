@@ -119,7 +119,7 @@ graph TD
     style Head fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
     style Result fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
 
-```.
+```
 ##  How It Works
 
 - Input Processing: Audio is resampled to 24kHz.
