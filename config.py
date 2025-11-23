@@ -9,7 +9,8 @@ CHUNK_SEC = 5
 BATCH_SIZE = 32
 EPOCHS = 100
 LEARNING_RATE = 1e-4
-MAX_DURATION = 10
+MAX_DURATION = 60
+DEFAULT_DURATION=10
 
 # We fetch the config from Hugging Face to see if it's 768 or 1024
 try:

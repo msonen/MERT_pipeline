@@ -81,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument("filepath", type=str, help="Path to mp3/wav file")
     # Default to the file saved by train_gtzan.py
     parser.add_argument("--head", type=str, default="./features/trained_genre_head.pth")
-    parser.add_argument("--limit", type=float, default=config.MAX_DURATION)
+    parser.add_argument("--limit", type=float, default=config.DEFAULT_DURATION)
     
     args = parser.parse_args()
 
