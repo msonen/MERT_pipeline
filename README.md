@@ -88,7 +88,7 @@ graph TD
     Clean[Clean Dataset<br/>24kHz Mono WAV]
     
     MERT[❄️ Frozen MERT Model<br/>Feature Extractor]
-    Ext[Extractor Script<br/>mert_extractor.py]
+    Ext[Extractor Script<br/>extractor.py]
     Feat[Feature Tensors<br/>.pt Files]
     
     Train[Training Script<br/>train_gtzan.py]
