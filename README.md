@@ -68,14 +68,17 @@ python train_gtzan.py
 
 Predict the genre of any new song. The script automatically handles resampling, chunking (sliding windows), and aggregation.
 ```bash
+# Copy <song_name>.mp3 into "raw_music" folder
+# preprocess all songs to the format in which MERT recognize
+python python preprocess.py --input "./raw_music/" --output "./preprocessed"
 # Basic Usage (Uses default 10s limit defined in config)
-python inference.py "path/to/song.mp3"
+python inference.py ./preprocessed/<song_name>.wav"
 
 # Analyze the first 30 seconds specifically
-python inference.py "path/to/song.mp3" --limit 30
+python inference.py ./preprocessed/<song_name>.wav --limit 30
 
 # Custom windowing (Fine-grained analysis for fast-paced music)
-python inference.py "path/to/song.mp3" --window 3.0 --overlap 0.5
+python inference.py ./preprocessed/<song_name>.wav --window 3.0 --overlap 0.5
 ```
 
 ## 📐 Workflow Diagram
