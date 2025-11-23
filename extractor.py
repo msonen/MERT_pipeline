@@ -8,7 +8,7 @@ import config
 
 def extract_and_save_features(input_root, output_folder):
     print(f"--- Starting Feature Extraction for {input_root} ---")
-    print(f"Settings: Limit={config.MAX_DURATION}s | Chunk={config.CHUNK_SEC}s | Dim={config.HIDDEN_DIM}")
+    print(f"Settings: Limit={config.EXTRACT_DURATION}s | Chunk={config.CHUNK_SEC}s | Dim={config.HIDDEN_DIM}")
     
     # Load MERT Model
     processor = Wav2Vec2FeatureExtractor.from_pretrained(config.MODEL_ID, trust_remote_code=True)
@@ -42,8 +42,8 @@ def extract_and_save_features(input_root, output_folder):
                 waveform = waveform.mean(dim=0, keepdim=True) # Mono
 
             # 2. LIMIT DURATION (The "Pre-Process" Cut)
-            # Use MAX_DURATION from config (e.g., 30 seconds)
-            max_len = int(config.SAMPLE_RATE * config.MAX_DURATION)
+            # Use EXTRACT_DURATION from config (e.g., 30 seconds)
+            max_len = int(config.SAMPLE_RATE * config.EXTRACT_DURATION)
             if waveform.shape[1] > max_len:
                 waveform = waveform[:, :max_len]
             # If shorter, we don't pad yet; the chunking loop handles it.
@@ -108,7 +108,7 @@ def extract_and_save_features(input_root, output_folder):
 
 if __name__ == "__main__":
     # Point to your RAW WAV data (processed by preprocess.py)
-    INPUT_ROOT = "./raw_data/genres" 
+    INPUT_ROOT = "./train_data/genres" 
     OUTPUT_DIR = "./features/gtzan"
     
     extract_and_save_features(INPUT_ROOT, OUTPUT_DIR)
