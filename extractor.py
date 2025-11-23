@@ -85,7 +85,12 @@ def extract_and_save_features(input_root, output_folder):
                 with torch.no_grad():
                     outputs = model(**inputs, output_hidden_states=True)
                     # Shape: (Batch, 375, Hidden_Dim)
-                    processed_chunks.append(outputs.last_hidden_state)
+                    # Index 0 = Input, Index 1 = Layer 1 ... Index 9 = Layer 9
+                    specific_layer_index = 9 # Best for GENRE classfication, 20 for 330M
+                    embeddings = outputs.hidden_states[specific_layer_index]
+                    # If you want the LAST layer (Standard):
+                    # embeddings = outputs.last_hidden_state
+                    processed_chunks.append(embeddings)
 
             # 5. Concatenate Back Together
             # Shape: (Total_Time_Steps, Hidden_Dim)
