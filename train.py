@@ -36,9 +36,7 @@ def train_downstream_task(feature_folder, labels_map, num_classes):
             
         print(f"Epoch {epoch+1}/{config.EPOCHS} | Loss: {total_loss:.4f}")
     
-    # 4. Save the trained head
-    torch.save(model.state_dict(), "trained_genre_head.pth")
-    print("Model saved to trained_genre_head.pth")
+    return model
 
 if __name__ == "__main__":
     # Example Labels (Filename -> Class ID)

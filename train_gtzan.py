@@ -2,6 +2,7 @@
 import glob
 import os
 from train import train_downstream_task  # Imports the function from your existing train.py
+import torch
 
 # --- CONFIGURATION ---
 FEATURE_FOLDER = "./features/gtzan"  # Must match output of extractor
@@ -52,7 +53,10 @@ if __name__ == "__main__":
         
         # 2. Call the generic training function
         # This uses the code you already have in train.py
-        train_downstream_task(FEATURE_FOLDER, labels, num_classes)
-        
+        model = train_downstream_task(FEATURE_FOLDER, labels, num_classes)
+        torch.save(model.state_dict(), "trained_genre_head.pth")
+        print("Model saved to trained_genre_head.pth")
+
+
     except Exception as e:
         print(f"Setup Failed: {e}")
