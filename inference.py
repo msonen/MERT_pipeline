@@ -54,16 +54,15 @@ class MERTInference:
             outputs = self.base_model(**inputs, output_hidden_states=True)
             embeddings = outputs.last_hidden_state
             
-            # --- FIX STARTS HERE ---
-            # ERROR WAS HERE: Do NOT pool manually. The head does this.
-            # final_embedding = embeddings.mean(dim=1)  <-- DELETE THIS LINE
+            # Squash (1, Time, Dim) -> (1, Dim)
+            final_embedding = embeddings.mean(dim=1)
 
             results = {}
 
             # 3. Run Prediction Head
             if self.head:
                 # Pass 'embeddings' (3D) directly, not 'final_embedding' (2D)
-                logits = self.head(embeddings) 
+                logits = self.head(final_embedding) 
                 probs = torch.softmax(logits, dim=1)
                 
                 # Get Top Prediction

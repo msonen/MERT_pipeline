@@ -6,7 +6,9 @@ import config
 class DownstreamHead(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
-        self.pool = nn.AdaptiveAvgPool1d(1) 
+        # REMOVED: self.pool = nn.AdaptiveAvgPool1d(1) 
+        # The input is already pooled by dataset.py
+        
         self.mlp = nn.Sequential(
             nn.Linear(config.HIDDEN_DIM, 512),
             nn.ReLU(),
@@ -15,7 +17,6 @@ class DownstreamHead(nn.Module):
         )
         
     def forward(self, x):
-        # x shape: (Batch, Time, Dim) -> (Batch, Dim, Time)
-        x = x.transpose(1, 2) 
-        x = self.pool(x).squeeze(2)
+        # Input x shape is now: (Batch, Dim)
+        # No need to transpose or pool
         return self.mlp(x)

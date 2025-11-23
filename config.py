@@ -11,7 +11,7 @@ EPOCHS = 100
 LEARNING_RATE = 1e-4
 MAX_DURATION = 180 # 3 min
 DEFAULT_DURATION=10
-EXTRACT_DURATION=30
+EXTRACT_DURATION=10
 
 # We fetch the config from Hugging Face to see if it's 768 or 1024
 try:
