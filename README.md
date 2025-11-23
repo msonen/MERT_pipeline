@@ -47,7 +47,7 @@ Check config.py to select your model size.
  Convert your raw music collection (MP3, FLAC, etc.) into the specific format MERT requires (24kHz Mono WAV).
 ```bash
 # Syntax: python preprocess.py --input <RAW_FOLDER> --output <CLEAN_FOLDER>
-python preprocess.py --input "./raw_music/" --output "./raw_data"
+python preprocess.py --input "./raw_music/" --output "./preprocessed"
 ```
 
  ### Step 2: Feature Extraction
