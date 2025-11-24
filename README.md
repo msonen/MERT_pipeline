@@ -9,13 +9,13 @@ It includes scripts for pre-processing raw audio, extracting deep features using
 ```text
 .
 ├── config.py             # Global configuration (Model ID, Sample Rate, Hyperparameters)
-├── preprocess.py         # Step 1: Convert raw audio (MP3/FLAC) to 24kHz WAV
-├── extractor.py          # Step 2: Extract features from MERT and save as tensors (.pt)
-├── train_gtzan.py        # Step 3: Train a classifier head (e.g., on GTZAN dataset)
+├── preprocess.py         # Utility: Convert raw audio (MP3/FLAC) to 24kHz WAV
+├── extractor.py          # Step 1: Extract features from MERT and save as tensors (.pt)
+├── train_gtzan.py        # Step 2: Train a classifier head (e.g., on GTZAN dataset)
 ├── dataset.py            # Utility: PyTorch Dataset class for loading features
 ├── model.py              # Utility: Neural Network Head architecture
 ├── train.py              # Utility: Generic training loop
-├── inference.py          # Step 4: Predict genre for new audio files
+├── inference.py          # Step 3: Predict genre for new audio files
 └── requirements.txt      # Python dependencies
 
 ```
@@ -43,14 +43,14 @@ Check config.py to select your model size.
 
  ## 🛠️ Workflow
 
- ### Step 1: Data Preparation (Pre-preprocess)
+ ### Step 0: Data Preparation (Pre-preprocess, might not be mandatory)
  Convert your raw music collection (MP3, FLAC, etc.) into the specific format MERT requires (24kHz Mono WAV).
 ```bash
 # Syntax: python preprocess.py --input <RAW_FOLDER> --output <CLEAN_FOLDER>
 python preprocess.py --input "./raw_music/" --output "./preprocessed"
 ```
 
- ### Step 2: Feature Extraction
+ ### Step 1: Feature Extraction
 Pass the clean audio through the frozen MERT model. This saves computational time by generating embeddings once and saving them as .pt files.
 ```bash
 # Runs recursively on subfolders in "./raw_data/genres" (or your configured input)
@@ -68,17 +68,14 @@ python train_gtzan.py
 
 Predict the genre of any new song. The script automatically handles resampling, chunking (sliding windows), and aggregation.
 ```bash
-# Copy <song_name>.mp3 into "raw_music" folder
-# preprocess all songs to the format in which MERT recognize
-python python preprocess.py --input "./raw_music/" --output "./preprocessed"
 # Basic Usage (Uses default 10s limit defined in config)
-python inference.py ./preprocessed/<song_name>.wav"
+python inference.py <song_fullpath>"
 
 # Analyze the first 30 seconds specifically
-python inference.py ./preprocessed/<song_name>.wav --limit 30
+python inference.py <song_fullpath> --limit 30
 
 # Custom windowing (Fine-grained analysis for fast-paced music)
-python inference.py ./preprocessed/<song_name>.wav --window 3.0 --overlap 0.5
+python inference.py <song_fullpath> --window 3.0 --overlap 0.5
 ```
 
 ## 📐 Workflow Diagram
