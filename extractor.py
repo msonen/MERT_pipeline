@@ -1,39 +1,65 @@
-# mert_extractor.py
 import os
 import glob
 import torch
 import torchaudio
+import argparse
+import sys
 from transformers import AutoModel, Wav2Vec2FeatureExtractor
 import config
 
 def extract_and_save_features(input_root, output_folder):
-    print(f"--- Starting Feature Extraction for {input_root} ---")
+    print(f"--- Starting Feature Extraction ---")
+    print(f"Input:  {input_root}")
+    print(f"Output: {output_folder}")
     print(f"Settings: Limit={config.EXTRACT_DURATION}s | Chunk={config.CHUNK_SEC}s | Dim={config.HIDDEN_DIM}")
     
     # Load MERT Model
-    processor = Wav2Vec2FeatureExtractor.from_pretrained(config.MODEL_ID, trust_remote_code=True)
-    model = AutoModel.from_pretrained(config.MODEL_ID, trust_remote_code=True)
-    model.eval()
+    try:
+        print(f"Loading model: {config.MODEL_ID}...")
+        processor = Wav2Vec2FeatureExtractor.from_pretrained(config.MODEL_ID, trust_remote_code=True)
+        model = AutoModel.from_pretrained(config.MODEL_ID, trust_remote_code=True)
+        model.eval()
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        sys.exit(1)
     
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
+        print(f"Created output directory: {output_folder}")
 
-    # Recursive search for .wav files
-    search_path = os.path.join(input_root, "**", "*.wav")
-    files = glob.glob(search_path, recursive=True)
-    print(f"Found {len(files)} files. Processing...")
+    # Search for all common audio formats recursively
+    extensions = ['*.wav', '*.mp3', '*.flac', '*.ogg', '*.m4a']
+    files = []
+    for ext in extensions:
+        # Search for lowercase extensions
+        files.extend(glob.glob(os.path.join(input_root, "**", ext), recursive=True))
+        # Search for uppercase extensions (e.g., .WAV, .MP3)
+        files.extend(glob.glob(os.path.join(input_root, "**", ext.upper()), recursive=True))
+
+    # Remove duplicates and sort
+    files = sorted(list(set(files)))
+
+    if not files:
+        print(f"No audio files found in {input_root}")
+        return
+
+    print(f"Found {len(files)} audio files. Processing...")
     
-    for file_path in files:
+    for i, file_path in enumerate(files):
         try:
+            # Generate Output Filename
+            # Logic: Song.mp3 -> Song.pt
             filename = os.path.basename(file_path)
-            save_name = filename.replace('.wav', '.pt')
+            name_without_ext = os.path.splitext(filename)[0]
+            save_name = f"{name_without_ext}.pt"
             save_path = os.path.join(output_folder, save_name)
             
             if os.path.exists(save_path):
                 continue
 
-            # 1. Load & Resample
+            # 1. Load & Resample (Torchaudio handles mp3/flac decoding)
             waveform, sr = torchaudio.load(file_path)
+            
             if sr != config.SAMPLE_RATE:
                 resampler = torchaudio.transforms.Resample(sr, config.SAMPLE_RATE)
                 waveform = resampler(waveform)
@@ -41,39 +67,32 @@ def extract_and_save_features(input_root, output_folder):
             if waveform.shape[0] > 1:
                 waveform = waveform.mean(dim=0, keepdim=True) # Mono
 
-            # 2. LIMIT DURATION (The "Pre-Process" Cut)
-            # Use EXTRACT_DURATION from config (e.g., 30 seconds)
+            # 2. LIMIT DURATION
             max_len = int(config.SAMPLE_RATE * config.EXTRACT_DURATION)
             if waveform.shape[1] > max_len:
                 waveform = waveform[:, :max_len]
-            # If shorter, we don't pad yet; the chunking loop handles it.
 
-            # 3. CHUNKING STRATEGY (To avoid OOM on GPU)
-            # MERT loves 5-second inputs [cite: 185]
-            chunk_size = int(config.SAMPLE_RATE * config.CHUNK_SEC) # 5s samples
-            stride = chunk_size # Non-overlapping chunks for training data efficiency
+            # 3. CHUNKING STRATEGY
+            chunk_size = int(config.SAMPLE_RATE * config.CHUNK_SEC)
+            stride = chunk_size
             
-            # Unfold creates windows: (Num_Chunks, Chunk_Size)
             if waveform.shape[1] < chunk_size:
-                # Pad if the TOTAL file is shorter than 5s
+                # Pad if too short
                 padding = chunk_size - waveform.shape[1]
                 chunks = torch.nn.functional.pad(waveform, (0, padding))
+                if chunks.dim() == 1: chunks = chunks.unsqueeze(0) # Ensure (1, Samples)
             else:
+                # Unfold creates (Num_Chunks, Chunk_Size)
                 chunks = waveform.squeeze().unfold(0, chunk_size, stride)
-                # Handle remaining frames if they don't fit a full chunk? 
-                # Usually easiest to drop the partial tail for training consistency.
 
-            # 4. Process Chunks in Batch
+            # 4. Process Chunks
             processed_chunks = []
             
-            # Process chunks (we do this in a loop to be safe on memory)
-            # or pass all chunks as one batch if GPU RAM allows.
-            # Let's do batch size of 4 to be safe.
+            # Process in small batches to save GPU memory
             BATCH_PROC_SIZE = 4
-            for i in range(0, len(chunks), BATCH_PROC_SIZE):
-                batch_audio = chunks[i : i + BATCH_PROC_SIZE]
+            for j in range(0, len(chunks), BATCH_PROC_SIZE):
+                batch_audio = chunks[j : j + BATCH_PROC_SIZE]
                 
-                # Ensure 2D shape for processor: (Batch, Samples)
                 if batch_audio.dim() == 1: 
                     batch_audio = batch_audio.unsqueeze(0)
                 
@@ -84,31 +103,37 @@ def extract_and_save_features(input_root, output_folder):
                 
                 with torch.no_grad():
                     outputs = model(**inputs, output_hidden_states=True)
-                    # Shape: (Batch, 375, Hidden_Dim)
-                    # Index 0 = Input, Index 1 = Layer 1 ... Index 9 = Layer 9
-                    # specific_layer_index = 9 # Best for GENRE classfication, 20 for 330M
-                    # embeddings = outputs.hidden_states[specific_layer_index]
-                    # If you want the LAST layer (Standard):
-                    embeddings = outputs.last_hidden_state
-                    processed_chunks.append(embeddings)
+                    # Get last layer: (Batch, Time, Dim)
+                    processed_chunks.append(outputs.last_hidden_state)
 
-            # 5. Concatenate Back Together
-            # Shape: (Total_Time_Steps, Hidden_Dim)
+            # 5. Concatenate & Save
             if len(processed_chunks) > 0:
                 full_embedding = torch.cat(processed_chunks, dim=0)
-                # Flatten batch dimension if it exists from concatenation
+                # Reshape to (Total_Time, Dim)
                 full_embedding = full_embedding.view(-1, config.HIDDEN_DIM)
                 
                 # Save Tensor
-                torch.save(full_embedding.unsqueeze(0), save_path) # Save as (1, Time, Dim)
-                print(f"Saved {save_name}: {full_embedding.shape}")
+                torch.save(full_embedding, save_path)
+                
+                # Simple progress indicator
+                print(f"[{i}/{len(files)}] Saved {save_name} ({full_embedding.shape})")
             
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
 
 if __name__ == "__main__":
-    # Point to your RAW WAV data (processed by preprocess.py)
-    INPUT_ROOT = "./train_data/genres" 
-    OUTPUT_DIR = "./features/gtzan"
+    parser = argparse.ArgumentParser(description="Extract MERT features from a folder of audio files.")
     
-    extract_and_save_features(INPUT_ROOT, OUTPUT_DIR)
+    # Arguments for input and output folders
+    parser.add_argument("--input", type=str, required=True, 
+                        help="Path to the folder containing audio files (mp3, wav, flac, etc.)")
+    parser.add_argument("--output", type=str, required=True, 
+                        help="Path to save the extracted feature tensors (.pt)")
+    
+    args = parser.parse_args()
+    
+    if not os.path.exists(args.input):
+        print(f"Error: Input directory '{args.input}' does not exist.")
+        sys.exit(1)
+        
+    extract_and_save_features(args.input, args.output)
