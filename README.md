@@ -10,7 +10,7 @@ It includes scripts for pre-processing raw audio, extracting deep features using
 .
 ├── config.py             # Global configuration (Model ID, Sample Rate, Hyperparameters)
 ├── preprocess.py         # Step 1: Convert raw audio (MP3/FLAC) to 24kHz WAV
-├── mert_extractor.py     # Step 2: Extract features from MERT and save as tensors (.pt)
+├── extractor.py          # Step 2: Extract features from MERT and save as tensors (.pt)
 ├── train_gtzan.py        # Step 3: Train a classifier head (e.g., on GTZAN dataset)
 ├── dataset.py            # Utility: PyTorch Dataset class for loading features
 ├── model.py              # Utility: Neural Network Head architecture
