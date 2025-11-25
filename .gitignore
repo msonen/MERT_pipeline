@@ -2,5 +2,5 @@ __pycache__/
 train_data/*
 features/gtzan/*
 features/giantsteps/*
-features/vocalset/*
+features/vocalset/*.pt
 raw_data/*
