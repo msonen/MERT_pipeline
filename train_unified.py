@@ -91,16 +91,47 @@ def load_labels(task_name):
             if genre_str in genre_map:
                 labels[wav_name] = genre_map[genre_str]
 
-    # CASE 3: CSV Based (MTT, EmoMusic, etc.)
+# CASE 3: CSV Based (MTT, EmoMusic, VocalSet, etc.)
     elif "csv" in conf:
         if not os.path.exists(conf['csv']):
             print(f"Warning: CSV file {conf['csv']} not found.")
             return {}
             
-        df = pd.read_csv(conf['csv'], sep='\t' if conf['csv'].endswith('tsv') else ',')
-        # Implementation depends on specific CSV format (requires checking dataset)
-        print("CSV loading logic needs to be customized for specific dataset columns.")
+        # Detect separator (Tab for TSV, Comma for CSV)
+        sep = '\t' if conf['csv'].endswith('.tsv') else ','
+        df = pd.read_csv(conf['csv'], sep=sep)
         
+        # Normalize column names to lowercase
+        df.columns = [c.lower().strip() for c in df.columns]
+        
+        # Identify Filename Column (Scan for common names)
+        path_col = next((c for c in ['filename', 'file', 'path', 'mp3_path', 'id'] if c in df.columns), None)
+        
+        if not path_col:
+            print(f"Error: Could not find filename column in {conf['csv']}. Available: {list(df.columns)}")
+            return {}
+
+        print(f"Parsing labels from {conf['csv']}...")
+        
+        for _, row in df.iterrows():
+            # Clean filename: Ensure it matches the .wav names in your feature folder
+            raw_name = str(row[path_col])
+            fname = os.path.basename(raw_name)
+            if not fname.endswith('.wav'):
+                fname = os.path.splitext(fname)[0] + '.wav'
+
+            # Sub-case: Regression (EmoMusic)
+            if conf['type'] == 'regression':
+                arousal = row.get('arousal') or row.get('arousal_mean')
+                valence = row.get('valence') or row.get('valence_mean')
+                if arousal is not None and valence is not None:
+                    labels[fname] = [float(arousal), float(valence)]
+
+            # Sub-case: Classification (VocalSet, etc.)
+            # Check for explicit 'label' column (integers)
+            elif 'label' in df.columns:
+                labels[fname] = int(row['label'])
+    
     print(f"Successfully loaded {len(labels)} labels.")
     return labels
 
