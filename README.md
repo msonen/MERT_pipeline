@@ -11,10 +11,11 @@ It includes scripts for pre-processing raw audio, extracting deep features using
 ├── config.py             # Global configuration (Model ID, Sample Rate, Hyperparameters)
 ├── preprocess.py         # Utility: Convert raw audio (MP3/FLAC) to 24kHz WAV
 ├── extractor.py          # Step 1: Extract features from MERT and save as tensors (.pt)
-├── train_gtzan.py        # Step 2: Train a classifier head (e.g., on GTZAN dataset)
+├── train_unified.py      # Step 2: Train a classifier head (e.g., on GTZAN dataset)
 ├── dataset.py            # Utility: PyTorch Dataset class for loading features
 ├── model.py              # Utility: Neural Network Head architecture
 ├── train.py              # Utility: Generic training loop
+├── download_data.py      # Utility: Downloads dataset which used in MIR tasks
 ├── inference.py          # Step 3: Predict genre for new audio files
 └── requirements.txt      # Python dependencies
 
@@ -54,28 +55,28 @@ python preprocess.py --input "./raw_music/" --output "./preprocessed"
 Pass the clean audio through the frozen MERT model. This saves computational time by generating embeddings once and saving them as .pt files.
 ```bash
 # Runs recursively on subfolders in "./raw_data/genres" (or your configured input)
-# Output: features_gtzan/ folder containing tensor files.
+# Output: features/gtzan/ folder containing tensor files.
 python extractor.py
 ```
 
  ### Step 3: Training (GTZAN Example)
 Train a lightweight classification head on top of the extracted features. This script automatically detects class labels from filenames (e.g., rock.001.pt -> Class "Rock").
 ```bash
-# Output: features/trained_genre_head.pth (The trained weights).
-python train_gtzan.py
+# Output: features/trained_gtzan.pth (The trained weights).
+python train_unified.py gtzan
 ```
  ### Step 4: Inference
 
 Predict the genre of any new song. The script automatically handles resampling, chunking (sliding windows), and aggregation.
 ```bash
 # Basic Usage (Uses default 10s limit defined in config)
-python inference.py <song_fullpath>"
+python inference.py <song_fullpath> --task gtzan"
 
 # Analyze the first 30 seconds specifically
-python inference.py <song_fullpath> --limit 30
+python inference.py <song_fullpath> --task gtzan --limit 30
 
 # Custom windowing (Fine-grained analysis for fast-paced music)
-python inference.py <song_fullpath> --window 3.0 --overlap 0.5
+python inference.py <song_fullpath> --task gtzan --window 3.0 --overlap 0.5
 ```
 
 ## 📐 Workflow Diagram
