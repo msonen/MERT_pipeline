@@ -1,34 +1,52 @@
 # dataset.py
-import os
-import glob
 import torch
+import glob
+import os
+import numpy as np
 from torch.utils.data import Dataset
 
-class MertEmbeddingsDataset(Dataset):
-    def __init__(self, feature_folder, labels_dict):
+class UnifiedMertDataset(Dataset):
+    def __init__(self, feature_folder, labels_map, task_type, num_classes):
         self.files = glob.glob(f"{feature_folder}/*.pt")
-        self.labels = labels_dict 
+        self.labels_map = labels_map
+        self.task_type = task_type
+        self.num_classes = num_classes
         
+        # Filter files that actually have labels
+        self.files = [f for f in self.files if self._get_key(f) in self.labels_map]
+
+    def _get_key(self, filepath):
+        # Returns "song.wav" from "/path/to/song.pt"
+        return os.path.basename(filepath).replace('.pt', '.wav')
+
     def __len__(self):
         return len(self.files)
-    
+
     def __getitem__(self, idx):
         path = self.files[idx]
-        filename = os.path.basename(path).replace('.pt', '.wav')
+        filename = self._get_key(path)
         
-        # Load Tensor: Shape (1, Time_Steps, Dim) or (Time_Steps, Dim)
+        # 1. Load & Pool Features
         embedding = torch.load(path)
-        
-        # Ensure it's squeezed to (Time, Dim) before averaging
-        if embedding.dim() == 3:
-            embedding = embedding.squeeze(0)
+        if embedding.dim() == 3: embedding = embedding.squeeze(0)
+        embedding_mean = embedding.mean(dim=0) # (768,)
+
+        # 2. Get Label
+        raw_label = self.labels_map[filename]
+
+        # 3. Format Label based on Task Type
+        if self.task_type == "multiclass":
+            # Expects single integer: 5
+            label_tensor = torch.tensor(raw_label, dtype=torch.long)
             
-        # --- FIX: Average Pooling Here ---
-        # We squash the Time dimension (dim=0) so every song becomes shape (Dim,)
-        # e.g., (2244, 768) -> (768,)
-        embedding_mean = embedding.mean(dim=0) 
-        
-        # Get Label
-        label = self.labels.get(filename, 0) 
-        
-        return embedding_mean, label
+        elif self.task_type == "multilabel":
+            # Expects list of indices: [0, 5] -> One-hot vector
+            label_tensor = torch.zeros(self.num_classes, dtype=torch.float32)
+            for cls_idx in raw_label:
+                label_tensor[cls_idx] = 1.0
+                
+        elif self.task_type == "regression":
+            # Expects float list: [0.5, 0.8]
+            label_tensor = torch.tensor(raw_label, dtype=torch.float32)
+
+        return embedding_mean, label_tensor

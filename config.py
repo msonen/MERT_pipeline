@@ -1,23 +1,27 @@
-# config.py
 import transformers
 
 # Old: "m-a-p/MERT-v1-330M"
 MODEL_ID = "m-a-p/MERT-v1-95M"
-
+HIDDEN_DIM = 768
 SAMPLE_RATE = 24000
 CHUNK_SEC = 5
 BATCH_SIZE = 32
-EPOCHS = 100
-LEARNING_RATE = 1e-4
 MAX_DURATION = 180 # 3 min
 DEFAULT_DURATION=10
 EXTRACT_DURATION=10
+LEARNING_RATE = 1e-4
+EPOCHS = 20
 
-# We fetch the config from Hugging Face to see if it's 768 or 1024
-try:
-    _model_config = transformers.AutoConfig.from_pretrained(MODEL_ID, trust_remote_code=True)
-    HIDDEN_DIM = _model_config.hidden_size
-    print(f"--> Auto-detected Hidden Dimension for {MODEL_ID}: {HIDDEN_DIM}")
-except Exception as e:
-    print(f"Warning: Could not auto-detect dimension. Defaulting to 768. Error: {e}")
-    HIDDEN_DIM = 768 # Safe default for 95M models
+# Task Configuration Registry
+# Type: 'multiclass' (one winner), 'multilabel' (many winners), 'regression' (score)
+TASKS = {
+    "gtzan":      {"type": "multiclass", "classes": 10,  "folder": "./features/gtzan"},
+    "mtt":        {"type": "multilabel", "classes": 50,  "folder": "./features/mtt", "csv": "./meta/mtt_tags.csv"},
+    "mtg_jamendo":{"type": "multilabel", "classes": 50,  "folder": "./features/mtg", "csv": "./meta/mtg_top50.tsv"},
+    "mtg_genre":  {"type": "multilabel", "classes": 87,  "folder": "./features/mtg_genre"},
+    "mtg_mood":   {"type": "multilabel", "classes": 56,  "folder": "./features/mtg_mood"},
+    "mtg_inst":   {"type": "multilabel", "classes": 40,  "folder": "./features/mtg_inst"},
+    "giantsteps": {"type": "multiclass", "classes": 24,  "folder": "./features/giantsteps"}, # 12 Major + 12 Minor
+    "emomusic":   {"type": "regression", "classes": 2,   "folder": "./features/emomusic", "csv": "./meta/emo.csv"}, # Arousal, Valence
+    "vocalset":   {"type": "multiclass", "classes": 20,  "folder": "./features/vocalset"}
+}

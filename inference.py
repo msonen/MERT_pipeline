@@ -30,49 +30,37 @@ class MERTInference:
         else:
             print("WARNING: No trained head found. Output will be raw features only.")
 
-    def process_file(self, file_path, max_duration=config.MAX_DURATION):
-        if not os.path.exists(file_path):
-            sys.exit(f"Error: File not found at {file_path}")
 
-        # 1. Load & Resample
-        waveform, sr = torchaudio.load(file_path)
-        if sr != config.SAMPLE_RATE:
-            resampler = torchaudio.transforms.Resample(sr, config.SAMPLE_RATE)
-            waveform = resampler(waveform)
-
-        if waveform.shape[0] > 1:
-            waveform = waveform.mean(dim=0, keepdim=True)
+    def process_file(self, file_path, task_name):
+        conf = config.TASKS[task_name]
         
-        # Limit Duration
-        max_frames = int(max_duration * config.SAMPLE_RATE)
-        if waveform.shape[1] > max_frames:
-            waveform = waveform[:, :max_frames]
-
-        # 2. Run MERT
-        inputs = self.processor(waveform.squeeze(), sampling_rate=config.SAMPLE_RATE, return_tensors="pt")
-        with torch.no_grad():
-            outputs = self.base_model(**inputs, output_hidden_states=True)
-            embeddings = outputs.last_hidden_state
+        # ... (Run MERT to get final_embedding) ...
+        
+        # Run Head
+        logits = self.head(final_embedding)
+        
+        results = {}
+        
+        if conf['type'] == "multiclass":
+            # Single Winner (Genre)
+            probs = torch.softmax(logits, dim=1)
+            idx = torch.argmax(probs).item()
+            results["ClassID"] = idx
+            results["Score"] = probs[0][idx].item()
             
-            # Squash (1, Time, Dim) -> (1, Dim)
-            final_embedding = embeddings.mean(dim=1)
+        elif conf['type'] == "multilabel":
+            # Multiple Winners (Tags)
+            probs = torch.sigmoid(logits) # Sigmoid for multi-label
+            # Get top 5 tags
+            top_probs, top_indices = torch.topk(probs, 5)
+            results["Top_Tags"] = top_indices.tolist()
+            results["Scores"] = top_probs.tolist()
+            
+        elif conf['type'] == "regression":
+            # Raw values (Emotion)
+            vals = logits[0].tolist()
+            results["Values"] = vals # e.g. [0.8, -0.2] (Arousal, Valence)
 
-            results = {}
-
-            # 3. Run Prediction Head
-            if self.head:
-                # Pass 'embeddings' (3D) directly, not 'final_embedding' (2D)
-                logits = self.head(final_embedding) 
-                probs = torch.softmax(logits, dim=1)
-                
-                # Get Top Prediction
-                pred_idx = torch.argmax(probs).item()
-                confidence = probs[0][pred_idx].item()
-                
-                results["Genre"] = GTZAN_LABELS[pred_idx]
-                results["Confidence"] = f"{confidence:.2%}"
-            # --- FIX ENDS HERE ---
-                
         return results
 
 if __name__ == "__main__":
