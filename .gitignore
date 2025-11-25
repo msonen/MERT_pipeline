@@ -1,4 +1,5 @@
 __pycache__/
 train_data/*
 features/gtzan/*
+features/giantsteps/*
 raw_data/*
