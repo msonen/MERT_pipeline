@@ -33,7 +33,7 @@ First, ensure you have **FFmpeg** installed (required for processing MP3s).
 
 Then install the Python requirements:
 ```bash
-pip install torch torchaudio transformers numpy tqdm nnAudio torchcodec
+pip install torch torchaudio transformers numpy tqdm nnAudio torchcodec requests mirdata
 ```
 
 ### 2. Configuration (config.py)
