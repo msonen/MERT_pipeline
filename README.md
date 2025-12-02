@@ -21,6 +21,26 @@ It includes scripts for pre-processing raw audio, extracting deep features using
 
 ```
 
+## MIR Tasks
+
+| **Task ID** | **Task Name** | **Dataset** | **Challenge Type** |
+| :--- | :--- | :--- | :--- |
+| 1 | **Music Tagging** | MagnaTagATune | General Tagging (Standard) |
+| 2 | **Music Tagging** | MTG-Top50 (Jamendo subset) | General Tagging (Large Scale) |
+| 3 | **Mood/Theme Tagging** | MTG-Mood/Theme (Jamendo subset) | Emotional/Contextual Tagging |
+| 4 | **Genre Classification** | GTZAN | Single-Label Classification |
+| 5 | **Genre Classification** | MTG-Genre (Jamendo subset) | Multi-Label Classification |
+| 6 | **Instrument Classification** | NSynth | Monophonic (Single Note) |
+| 7 | **Instrument Classification** | MTG-Instrument (Jamendo subset) | Polyphonic (Full Track) |
+| 8 | **Key Detection** | GiantSteps | Tonal/Harmonic Analysis |
+| 9 | **Pitch Classification** | NSynth | Fine-grained Frequency Analysis |
+| 10 | **Emotion Recognition** | Emomusic | Regression (Valence/Arousal) |
+| 11 | **Beat Tracking** | GTZAN Rhythm | Temporal/Rhythmic Analysis |
+| 12 | **Vocal Technique** | VocalSet | Performance Style Analysis |
+| 13 | **Singer Identification** | VocalSet | Timbre/Identity Analysis |
+| 14 | **Source Separation** | MUSDB18 | Signal Decomposition |
+
+
 ##  Quick Start
 
 Follow these steps to go from raw MP3s to a working Genre Classifier.
