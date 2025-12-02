@@ -14,6 +14,34 @@ GTZAN_LABELS = [
     "jazz", "metal", "pop", "reggae", "rock"
 ]
 
+VOCAL_SINGER_LABELS = [ 'female1', 'female2', 'female3', 'female4', 'female5', 'female6', 'female7', 'female8', 'female9',
+                        'male1', 'male2', 'male3', 'male4', 'male5', 'male6', 'male7', 'male8', 'male9', 'male10', 'male11' ]
+
+VOCAL_TECH_LABELS = [
+    'arpeggio',
+    'fast_forte', # Fallback
+    'inhaled',
+    'other',
+    'scale',
+    'spoken',
+    'straight',
+    'trill',
+    'vibrato',
+    'belt',
+    'breathy',
+    'lip_trill',
+    'vocal_fry',
+    'vocal_fry',
+    # Dynamics often treated as techniques in VocalSet
+    'fast_forte',
+    'fast_piano',
+    'slow_forte',
+    'slow_piano',
+    'fast_piano', # Fallback
+    'glissando',
+    'runs',
+]
+
 # 2. GiantSteps Keys (0-11 Major, 12-23 Minor)
 PITCHES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 GIANTSTEPS_LABELS = [f"{p} Major" for p in PITCHES] + [f"{p} Minor" for p in PITCHES]
@@ -105,6 +133,11 @@ class MERTInference:
                         results["Prediction"] = GTZAN_LABELS[pred_idx]
                     elif self.task_name == "giantsteps":
                         results["Prediction"] = GIANTSTEPS_LABELS[pred_idx]
+                    elif self.task_name == "vocal_singer":
+                        results["Prediction"] = VOCAL_SINGER_LABELS[pred_idx]
+                    elif self.task_name == "vocal_tech":
+                        results["Prediction"] = VOCAL_TECH_LABELS[pred_idx]
+
 
                 # CASE B: Multilabel (Tagging)
                 elif self.task_conf['type'] == "multilabel":

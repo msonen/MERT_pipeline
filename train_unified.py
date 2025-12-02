@@ -129,8 +129,15 @@ def load_labels(task_name):
 
             # Sub-case: Classification (VocalSet, etc.)
             # Check for explicit 'label' column (integers)
-            elif 'label' in df.columns:
-                labels[fname] = int(row['label'])
+            # Sub-case: Classification (Generic)
+            # Use 'label_col' from config if it exists, otherwise default to 'label'
+            target_col = conf.get('label_col', 'label')
+            
+            if target_col in df.columns:
+                try:
+                    labels[fname] = int(row[target_col])
+                except ValueError:
+                    continue
     
     print(f"Successfully loaded {len(labels)} labels.")
     return labels
@@ -201,7 +208,7 @@ def train_task(task_name):
         print(f"Epoch {epoch+1} | Loss: {avg_loss:.4f}")
 
     # 5. Save
-    torch.save(model.state_dict(), f"trained_{task_name}.pth")
+    torch.save(model.state_dict(), f"./features/trained_{task_name}.pth")
     print(f"Saved trained_{task_name}.pth")
 
 if __name__ == "__main__":
