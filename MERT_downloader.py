@@ -15,7 +15,6 @@ print(f"Downloading MERT model to {local_folder}...")
 snapshot_download(
     repo_id=MODEL_ID,
     local_dir=local_folder,
-    local_dir_use_symlinks=False,  # Important: ensures actual files are downloaded, not links
     ignore_patterns=["*.msgpack", "*.h5", "*.ot"] # Optional: skip TensorFlow/Flax weights to save space
 )
 
