@@ -23,9 +23,14 @@ EMO_LABELS = ["Arousal", "Valence"]
 
 class MERTInference:
     def __init__(self, task_name, head_weights_path):
-        print(f"Loading MERT model: {config.MODEL_ID}...")
-        self.processor = Wav2Vec2FeatureExtractor.from_pretrained(config.MODEL_ID, trust_remote_code=True)
-        self.base_model = AutoModel.from_pretrained(config.MODEL_ID, trust_remote_code=True)
+
+        model_actual_id = config.MODEL_ID;
+        if os.path.exists("./" + model_actual_id):
+            model_actual_id = "./" + model_actual_id
+        
+        print(f"Loading MERT model: {model_actual_id}...")
+        self.processor = Wav2Vec2FeatureExtractor.from_pretrained(model_actual_id, trust_remote_code=True)
+        self.base_model = AutoModel.from_pretrained(model_actual_id, trust_remote_code=True)
         self.base_model.eval()
         
         # Load Task Config
