@@ -10,6 +10,7 @@ import os
 import glob
 from sklearn.metrics import average_precision_score, roc_auc_score
 import numpy as np
+import json
 
 # --- MUSIC THEORY UTILS (For GiantSteps) ---
 PITCH_CLASSES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -107,6 +108,35 @@ def load_labels(task_name):
             # Convert "0;5;10" -> [0, 5, 10]
             indices = [int(x) for x in str(row['tag_indices']).split(';')]
             labels[fname] = indices
+
+    # CASE 5: NSynth (JSON Based)
+    elif "nsynth" in task_name:
+        json_path = conf.get('json')
+        if not json_path or not os.path.exists(json_path):
+            print(f"Error: JSON file {json_path} not found.")
+            return {}
+            
+        print(f"Loading NSynth labels from {json_path}...")
+        try:
+            with open(json_path, 'r') as f:
+                data = json.load(f)
+        except Exception as e:
+            print(f"Error reading JSON: {e}")
+            return {}
+
+        target_key = conf.get('label_key') # 'instrument_family' or 'pitch'
+        
+        # NSynth JSON structure:
+        # {
+        #   "guitar_acoustic_001-060-050": { "pitch": 60, "instrument_family": 3, ... },
+        #   ...
+        # }
+        for filename_stem, attributes in data.items():
+            # UnifiedMertDataset expects keys ending in .wav
+            wav_name = f"{filename_stem}.wav"
+            
+            if target_key in attributes:
+                labels[wav_name] = attributes[target_key]
     
 # CASE 3: CSV Based (MTT, EmoMusic, VocalSet, etc.)
     elif "csv" in conf:

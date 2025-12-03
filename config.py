@@ -23,6 +23,21 @@ TASKS = {
         "csv": "./train_data/meta/mtt_top50.csv", # Updated path
         "vocab": "./train_data/meta/mtt_top50_vocab.txt"
     },
+    "nsynth_inst": {
+        "type": "multiclass", 
+        "classes": 11,  
+        "folder": "./features/nsynth", 
+        "json": "./train_data/raw_data/nsynth/examples.json", 
+        "label_key": "instrument_family"
+    },
+    # --- TASK 9: Pitch Classification (NSynth) ---
+    "nsynth_pitch": {
+        "type": "multiclass", 
+        "classes": 128, 
+        "folder": "./features/nsynth", 
+        "json": "./train_data/raw_data/nsynth/examples.json", 
+        "label_key": "pitch"
+    },
     "mtg_jamendo":{"type": "multilabel", "classes": 50,  "folder": "./features/mtg", "csv": "./meta/mtg_top50.tsv"},
     "mtg_genre":  {"type": "multilabel", "classes": 87,  "folder": "./features/mtg_genre"},
     "mtg_mood":   {"type": "multilabel", "classes": 56,  "folder": "./features/mtg_mood"},
