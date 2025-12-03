@@ -8,6 +8,8 @@ import config
 import pandas as pd
 import os
 import glob
+from sklearn.metrics import average_precision_score, roc_auc_score
+import numpy as np
 
 # --- MUSIC THEORY UTILS (For GiantSteps) ---
 PITCH_CLASSES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -48,7 +50,7 @@ def load_labels(task_name):
     if task_name == "giantsteps":
         # Look for .key files recursively in raw_data
         # Structure is typically raw_data/giantsteps/audio/*.mp3 and annotations/keys/*.key
-        raw_root = "./raw_data/giantsteps" 
+        raw_root = "./train_data/giantsteps" 
         key_files = glob.glob(os.path.join(raw_root, "**", "*.key"), recursive=True)
         
         print(f"Found {len(key_files)} annotation files (.key). Parsing...")
@@ -90,7 +92,22 @@ def load_labels(task_name):
             genre_str = fname.split('.')[0]
             if genre_str in genre_map:
                 labels[wav_name] = genre_map[genre_str]
-
+    
+    # CASE 4: Custom Top-50 CSV (MTT)
+    elif task_name == "mtt":
+        if not os.path.exists(conf['csv']):
+            print(f"Error: Run prepare_mtt.py first to generate {conf['csv']}")
+            return {}
+            
+        df = pd.read_csv(conf['csv'])
+        print(f"Loading MTT Top-50 labels from {conf['csv']}...")
+        
+        for _, row in df.iterrows():
+            fname = row['filename']
+            # Convert "0;5;10" -> [0, 5, 10]
+            indices = [int(x) for x in str(row['tag_indices']).split(';')]
+            labels[fname] = indices
+    
 # CASE 3: CSV Based (MTT, EmoMusic, VocalSet, etc.)
     elif "csv" in conf:
         if not os.path.exists(conf['csv']):
@@ -142,6 +159,36 @@ def load_labels(task_name):
     print(f"Successfully loaded {len(labels)} labels.")
     return labels
 
+def validate_multilabel(model, val_loader, criterion):
+    model.eval()
+    total_loss = 0
+    all_preds = []
+    all_targets = []
+    
+    with torch.no_grad():
+        for x, y in val_loader:
+            logits = model(x)
+            loss = criterion(logits, y)
+            total_loss += loss.item()
+            
+            # Save for metrics
+            probs = torch.sigmoid(logits)
+            all_preds.append(probs.cpu().numpy())
+            all_targets.append(y.cpu().numpy())
+            
+    all_preds = np.concatenate(all_preds)
+    all_targets = np.concatenate(all_targets)
+    
+    # Calculate Metrics (Macro Average)
+    try:
+        roc_auc = roc_auc_score(all_targets, all_preds, average='macro')
+        ap = average_precision_score(all_targets, all_preds, average='macro')
+    except ValueError:
+        roc_auc = 0
+        ap = 0
+        
+    return total_loss / len(val_loader), roc_auc, ap
+
 def train_task(task_name):
     if task_name not in config.TASKS:
         print(f"Error: Task {task_name} not found in config.py")
@@ -190,11 +237,12 @@ def train_task(task_name):
     elif conf['type'] == "regression":
         criterion = nn.MSELoss()
 
-    # 4. Loop
+# 4. Loop
+    print(f"Training on {len(train_set)} samples, Validating on {len(val_set)} samples.")
+    
     for epoch in range(config.EPOCHS):
         model.train()
         total_loss = 0
-        batch_count = 0
         for x, y in train_loader:
             optimizer.zero_grad()
             pred = model(x)
@@ -202,10 +250,16 @@ def train_task(task_name):
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
-            batch_count += 1
             
-        avg_loss = total_loss / batch_count if batch_count > 0 else 0
-        print(f"Epoch {epoch+1} | Loss: {avg_loss:.4f}")
+        train_loss = total_loss / len(train_loader)
+        
+        # Validation Step
+        if conf['type'] == 'multilabel':
+            val_loss, val_roc, val_ap = validate_multilabel(model, val_loader, criterion)
+            print(f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | ROC-AUC: {val_roc:.4f} | AP: {val_ap:.4f}")
+        else:
+            # Fallback for other tasks (add logic for multiclass acc later)
+            print(f"Epoch {epoch+1} | Train Loss: {train_loss:.4f}")
 
     # 5. Save
     torch.save(model.state_dict(), f"./features/trained_{task_name}.pth")
